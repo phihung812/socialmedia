@@ -1,0 +1,54 @@
+# config/kong.yml
+_format_version: "2.1"
+_transform: true
+
+services:
+- name: user-service
+  url: http://user-service:3001
+  routes:
+  - name: user-routes
+    paths:
+    - /api/users
+    - /api/auth
+    strip_path: false
+  plugins:
+  - name: jwt
+    config:
+      secret_is_base64: false
+      key_claim_name: kid
+
+- name: product-service
+  url: http://product-service:3002
+  routes:
+  - name: product-routes
+    paths:
+    - /api/products
+    - /api/categories
+    strip_path: false
+  plugins:
+  - name: jwt
+    config:
+      secret_is_base64: false
+      key_claim_name: kid
+
+plugins:
+- name: cors
+  config:
+    origins:
+    - http://localhost:3000
+    methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+    headers:
+    - Authorization
+    - Content-Type
+    credentials: true
+
+- name: rate-limiting
+  config:
+    minute: 100
+    hour: 1000
+    policy: local

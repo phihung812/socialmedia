@@ -1,0 +1,18 @@
+# config/plugins/jwt-auth.yml
+_format_version: "2.1"
+_transform: true
+
+plugins:
+- name: jwt
+  enabled: true
+  config:
+    secret_is_base64: false
+    claims_to_verify:
+    - exp
+    key_claim_name: kid
+    run_on_preflight: true
+    maximum_expiration: 86400  # 24 giờ
+    header_names:
+    - Authorization
+    uri_param_names:
+    - jwt

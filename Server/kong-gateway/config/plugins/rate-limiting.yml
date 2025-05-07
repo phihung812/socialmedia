@@ -1,0 +1,18 @@
+# config/plugins/rate-limiting.yml
+_format_version: "2.1"
+_transform: true
+
+plugins:
+- name: rate-limiting
+  enabled: true
+  config:
+    second: null
+    minute: 60
+    hour: 1000
+    day: 10000
+    month: null
+    year: null
+    limit_by: consumer
+    policy: local
+    fault_tolerant: true
+    hide_client_headers: false

@@ -1,0 +1,32 @@
+
+# config/services/user-service.yml
+_format_version: "2.1"
+_transform: true
+
+services:
+- name: user-service
+  url: http://user-service:3001
+  protocol: http
+  host: user-service
+  port: 3001
+  path: /
+  retries: 5
+  connect_timeout: 60000
+  write_timeout: 60000
+  read_timeout: 60000
+  routes:
+  - name: user-routes
+    paths:
+    - /api/users
+    - /api/profiles
+    strip_path: false
+    preserve_host: false
+    protocols:
+    - http
+    - https
+  plugins:
+  - name: jwt
+  - name: rate-limiting
+    config:
+      minute: 100
+  - name: request-transformer

@@ -28,21 +28,7 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      'prettier/prettier': [
-        'error',
-        {
-          endOfLine: 'lf',
-        },
-      ],
-      
+      '@typescript-eslint/no-unsafe-argument': 'warn'
     },
   },
-  ,
-  {
-  "extends": [
-    "plugin:prettier/recommended"
-  ]
-  }
-  
 );
