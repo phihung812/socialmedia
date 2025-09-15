@@ -14,8 +14,6 @@ const getUser = async () => {
     try {
         const response = await api_user.get('/user')
         users.value = response.data
-console.log(users.value);
-
     } catch (error) {
         console.error(error);
 

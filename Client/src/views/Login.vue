@@ -1,3 +1,59 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import { login } from '@/service/auth.service';
+import { useAuthStore } from '@/stores/authStore';
+
+const authStore = useAuthStore()
+const router = useRouter()
+const loginForm = ref({
+  email: '',
+  password: ''
+});
+
+const activeImage = ref(1);
+const imageInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const currentYear = new Date().getFullYear();
+
+const isFormValid = computed(() => {
+  return loginForm.value.email.trim() !== '' && loginForm.value.password.trim() !== '';
+});
+
+
+const handleLogin = async() => { 
+  const data = {
+    email: loginForm.value.email,
+    password: loginForm.value.password
+  } 
+  
+  try {
+    const res = await login(data)
+    const user = res.user;
+    const token =  res.access_token;
+    authStore.successLogin({ userData: user, token })
+
+    router.push('/');
+  } catch (error) {
+    console.log(error);
+  }
+  
+};
+
+const rotateImages = () => {
+  activeImage.value = activeImage.value === 3 ? 1 : activeImage.value + 1;
+};
+
+onMounted(() => {
+  imageInterval.value = setInterval(rotateImages, 4000);
+});
+
+onBeforeUnmount(() => {
+  if (imageInterval.value) {
+    clearInterval(imageInterval.value);
+  }
+});
+</script>
+
 <template>
   <div class="auth-container">
     <div class="auth-wrapper">
@@ -5,7 +61,7 @@
       <div class="auth-right">
         <div class="auth-card">
           <div class="logo">
-            <h1>Instagram</h1>
+            <h1>Mevu</h1>
           </div>
           
           <form @submit.prevent="handleLogin">
@@ -13,7 +69,7 @@
               <input 
                 type="text" 
                 placeholder="Phone number, username, or email" 
-                v-model="loginForm.username"
+                v-model="loginForm.email"
                 required
               />
             </div>
@@ -59,17 +115,6 @@
           <p>Don't have an account? <router-link to="/register" class="signup-link">Sign up</router-link></p>
         </div>
         
-        <!-- <div class="get-app">
-          <p>Get the app.</p>
-          <div class="app-download">
-            <a href="#" class="app-btn">
-              <img src="" alt="App Store" />
-            </a>
-            <a href="#" class="app-btn">
-              <img src="" alt="Google Play" />
-            </a>
-          </div>
-        </div> -->
       </div>
     </div>
     
@@ -102,48 +147,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'Login',
-  data() {
-    return {
-      loginForm: {
-        username: '',
-        password: ''
-      },
-      activeImage: 1,
-      imageInterval: null,
-      currentYear: new Date().getFullYear()
-    }
-  },
-  computed: {
-    isFormValid() {
-      return this.loginForm.username.trim() !== '' && this.loginForm.password.trim() !== '';
-    }
-  },
-  methods: {
-    handleLogin() {
-      // Handle login logic here
-      console.log('Login attempt with:', this.loginForm);
-      // In a real app, you would call an API here
-      alert('Login functionality would be implemented here');
-    },
-    rotateImages() {
-      this.activeImage = this.activeImage === 3 ? 1 : this.activeImage + 1;
-    }
-  },
-  mounted() {
-    // Set up image rotation
-    this.imageInterval = setInterval(this.rotateImages, 4000);
-  },
-  beforeUnmount() {
-    // Clean up interval
-    if (this.imageInterval) {
-      clearInterval(this.imageInterval);
-    }
-  }
-}
-</script>
+
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -175,7 +179,7 @@ export default {
 .auth-right {
   width: 1000px;
   max-width: 450px;
-  
+
 }
 
 .auth-card {

@@ -35,6 +35,12 @@ export default tseslint.config(
           endOfLine: 'lf',
         },
       ],
+      
     },
   },
+  {
+  "extends": [
+    "plugin:prettier/recommended"
+  ]
+  }
 );

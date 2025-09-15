@@ -1,9 +1,112 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import api from '@/service/api'
+import { AxiosError } from 'axios'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const registerForm = ref({
+  email: '',
+  fullName: '',
+  username: '',
+  password: ''
+})
+
+const errors = ref({
+  email: '',
+  fullName: '',
+  username: '',
+  password: ''
+})
+
+const currentYear = new Date().getFullYear()
+
+// Validation functions
+const validateEmail = (email: string) => {
+  if (!email) return 'Email là bắt buộc'
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email) ? '' : 'Email không đúng định dạng'
+}
+
+const validateFullName = (fullName: string) => {
+  if (!fullName) return 'Họ tên là bắt buộc'
+  if (fullName.trim().length < 2) return 'Họ tên phải có ít nhất 2 ký tự'
+  return ''
+}
+
+const validateUsername = (username: string) => {
+  if (!username) return 'Tên người dùng là bắt buộc'
+  if (username.length < 5) return 'Tên người dùng phải có ít nhất 5 ký tự'
+  if (username.length > 15) return 'Tên người dùng không được quá 15 ký tự'
+  const usernameRegex = /^[a-zA-Z0-9_]+$/
+  return usernameRegex.test(username) ? '' : 'Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới'
+}
+
+const validatePassword = (password: string) => {
+  if (!password) return 'Mật khẩu là bắt buộc'
+  if (password.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự'
+  return ''
+}
+
+// Watch for changes and validate
+watch(() => registerForm.value.email, (newVal) => {
+  errors.value.email = validateEmail(newVal)
+})
+
+watch(() => registerForm.value.fullName, (newVal) => {
+  errors.value.fullName = validateFullName(newVal)
+})
+
+watch(() => registerForm.value.username, (newVal) => {
+  errors.value.username = validateUsername(newVal)
+})
+
+watch(() => registerForm.value.password, (newVal) => {
+  errors.value.password = validatePassword(newVal)
+})
+
+const isFormValid = computed(() => {
+  return !errors.value.email &&
+         !errors.value.fullName &&
+         !errors.value.username &&
+         !errors.value.password &&
+         registerForm.value.email.trim() !== '' &&
+         registerForm.value.fullName.trim() !== '' &&
+         registerForm.value.username.trim() !== '' &&
+         registerForm.value.password.trim() !== ''
+})
+
+const handleRegister = async () => {
+  // Validate all fields before submitting
+  errors.value.email = validateEmail(registerForm.value.email)
+  errors.value.fullName = validateFullName(registerForm.value.fullName)
+  errors.value.username = validateUsername(registerForm.value.username)
+  errors.value.password = validatePassword(registerForm.value.password)
+  
+  if (!isFormValid.value) {
+    alert('Vui lòng kiểm tra lại thông tin và sửa các lỗi')
+    return
+  }
+  
+  const data = { ...registerForm.value }
+  try {
+    const response = await api.post('/users', data)
+    alert('Tạo tài khoản thành công')
+    router.push('/login') 
+  } catch (error) {
+    const err = error as AxiosError<any>
+    alert(err.response?.data.message || 'Có lỗi xảy ra khi tạo tài khoản')
+  }
+}
+</script>
+
 <template>
   <div class="auth-container">
     <div class="auth-wrapper">
       <div class="auth-card register-card">
         <div class="logo">
-          <h1>Instagram</h1>
+          <h1>Mevu</h1>
         </div>
         
         <h2 class="signup-message">Sign up to see photos and videos from your friends.</h2>
@@ -25,8 +128,10 @@
               type="email" 
               placeholder="Mobile Number or Email" 
               v-model="registerForm.email"
+              :class="{ 'error': errors.email }"
               required
             />
+            <p v-if="errors.email" class="error-message">{{ errors.email }}</p>
           </div>
           
           <div class="form-group">
@@ -34,8 +139,10 @@
               type="text" 
               placeholder="Full Name" 
               v-model="registerForm.fullName"
+              :class="{ 'error': errors.fullName }"
               required
             />
+            <p v-if="errors.fullName" class="error-message">{{ errors.fullName }}</p>
           </div>
           
           <div class="form-group">
@@ -43,8 +150,10 @@
               type="text" 
               placeholder="Username" 
               v-model="registerForm.username"
+              :class="{ 'error': errors.username }"
               required
             />
+            <p v-if="errors.username" class="error-message">{{ errors.username }}</p>
           </div>
           
           <div class="form-group">
@@ -52,8 +161,10 @@
               type="password" 
               placeholder="Password" 
               v-model="registerForm.password"
+              :class="{ 'error': errors.password }"
               required
             />
+            <p v-if="errors.password" class="error-message">{{ errors.password }}</p>
           </div>
           
           <div class="policy-info">
@@ -70,12 +181,7 @@
             </p>
           </div>
           
-          <button 
-            type="submit" 
-            class="signup-btn"
-            :disabled="!isFormValid"
-            :class="{ 'btn-active': isFormValid }"
-          >
+          <button type="submit" class="signup-btn" :disabled="!isFormValid" :class="{ 'btn-active': isFormValid }">
             Sign up
           </button>
         </form>
@@ -116,39 +222,6 @@
     </footer>
   </div>
 </template>
-
-<script>
-export default {
-  name: 'Register',
-  data() {
-    return {
-      registerForm: {
-        email: '',
-        fullName: '',
-        username: '',
-        password: ''
-      },
-      currentYear: new Date().getFullYear()
-    }
-  },
-  computed: {
-    isFormValid() {
-      return this.registerForm.email.trim() !== '' && 
-             this.registerForm.fullName.trim() !== '' &&
-             this.registerForm.username.trim() !== '' &&
-             this.registerForm.password.trim() !== '';
-    }
-  },
-  methods: {
-    handleRegister() {
-      // Handle register logic here
-      console.log('Register attempt with:', this.registerForm);
-      // In a real app, you would call an API here
-      alert('Register functionality would be implemented here');
-    }
-  }
-}
-</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -275,6 +348,18 @@ input:focus {
   outline: none;
 }
 
+input.error {
+  border-color: #ed4956;
+}
+
+.error-message {
+  color: #ed4956;
+  font-size: 12px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
 .policy-info {
   color: #8e8e8e;
   font-size: 12px;
@@ -313,7 +398,8 @@ input:focus {
 }
 
 .signup-btn:disabled {
-  cursor: default;
+  cursor: not-allowed;
+  opacity: 0.3;
 }
 
 .auth-card-alt {

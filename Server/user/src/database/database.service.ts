@@ -11,7 +11,7 @@ export class DatabaseService {
   }
 
   checkConnection(): boolean {
-    return this.connection.readyState === 1; // 1 là trạng thái "connected"
+    return this.connection.readyState === 1; 
   }
 
   getConnection(): Connection {

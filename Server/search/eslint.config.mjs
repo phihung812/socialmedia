@@ -37,4 +37,9 @@ export default tseslint.config(
       ],
     },
   },
+  {
+  "extends": [
+    "plugin:prettier/recommended"
+  ]
+  }
 );

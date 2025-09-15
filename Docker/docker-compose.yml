@@ -1,7 +1,10 @@
+# version: '3.8'
+
 services:
   # Kong database
   kong-database:
     image: postgres:13
+    container_name: kong-database
     environment:
       POSTGRES_USER: kong
       POSTGRES_DB: kong
@@ -11,9 +14,10 @@ services:
     networks:
       - backend-network
 
-  # Kong migration
+  # Kong migration (Chỉ chạy một lần)
   kong-migration:
     image: kong:latest
+    container_name: kong-migration
     command: kong migrations bootstrap
     depends_on:
       - kong-database
@@ -24,11 +28,12 @@ services:
       KONG_PG_PASSWORD: kong
     networks:
       - backend-network
-    restart: on-failure
+    restart: "no"  # Đảm bảo không tái khởi động service này sau khi hoàn thành migration
 
   # Kong API Gateway
   kong:
     image: kong:latest
+    container_name: kong
     depends_on:
       - kong-database
       - kong-migration
@@ -53,3 +58,193 @@ services:
     networks:
       - backend-network
     restart: on-failure
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch-node
+      - cluster.name=docker-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - "SERVER_NAME=kibana.local"
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5673:5672"   
+      - "15673:15672" 
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  notification-gateway1:
+    container_name: notification-gateway1
+    build:
+      context: ../server/notification-gateway 
+    volumes:
+      - ../server/notification-gateway:/notification-gateway
+      - /notification-gateway/node_modules # tránh lỗi node_modules bị ghi đè từ host    
+    environment:
+      - PORT=3060
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy 
+    networks:
+      - backend-network
+    command: npm run start:dev
+
+
+  notification-gateway2:
+    container_name: notification-gateway2
+    build:
+      context: ../server/notification-gateway 
+    volumes:
+      - ../server/notification-gateway:/notification-gateway
+      - /notification-gateway/node_modules # tránh lỗi node_modules bị ghi đè từ host    
+    environment:
+      - PORT=3060
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy 
+    networks:
+      - backend-network
+    command: npm run start:dev
+
+  message-gateway1:
+    container_name: message-gateway1
+    build:
+      context: ../server/message-gateway 
+    volumes:
+      - ../server/message-gateway:/message-gateway
+      - /message-gateway/node_modules # tránh lỗi node_modules bị ghi đè từ host
+    environment:
+      - PORT=3080
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy 
+    networks:
+      - backend-network
+    command: npm run start:dev
+
+  message-gateway2:
+    container_name: message-gateway2
+    build:
+      context: ../server/message-gateway  
+    volumes:
+      - ../server/message-gateway:/message-gateway
+      - /message-gateway/node_modules # tránh lỗi node_modules bị ghi đè từ host  
+    environment:
+      - PORT=3080
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend-network
+    command: npm run start:dev
+
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - E:/social_media/Mevu/Server/kong-gateway/config/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - notification-gateway1
+      - notification-gateway2
+      - message-gateway1
+      - message-gateway2
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # QUAN TRỌNG: Cho phép nginx connect tới host
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    driver: bridge
+
+volumes:
+  kong_data:  # Định nghĩa volume cho kong-database
+    driver: local
+
+  elasticsearch_data:  
+    driver: local
+
+  rabbitmq_data:
+    driver: local

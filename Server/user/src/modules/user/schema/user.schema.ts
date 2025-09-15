@@ -1,83 +1,107 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+  import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+  import { Document } from 'mongoose';
 
-export type UserDocument = User & Document;
+  export type UserDocument = User & Document;
 
-@Schema()
-export class Location {
-  @Prop({ type: String })
-  country: string;
+  @Schema()
+  export class Location {
+    @Prop({ type: String })
+    country: string;
 
-  @Prop({ type: String })
-  city: string;
-}
+    @Prop({ type: String })
+    city: string;
+  }
 
-@Schema()
-export class Statistics {
-  @Prop({ type: Number, default: 0 })
-  postCount: number;
+  @Schema()
+  export class Statistics {
+    @Prop({ type: Number, default: 0 })
+    postCount: number;
 
-  @Prop({ type: Number, default: 0 })
-  followerCount: number;
+    @Prop({ type: Number, default: 0 })
+    followerCount: number;
 
-  @Prop({ type: Number, default: 0 })
-  followingCount: number;
-}
+    @Prop({ type: Number, default: 0 })
+    followingCount: number;
+  }
 
-@Schema({ timestamps: { createdAt: 'createdAt', updatedAt: false } })
-export class User extends Document {
-  @Prop({ type: String, unique: true, required: true })
-  username: string;
+  @Schema()
+  export class Avatar {
+    @Prop({ type: String })
+    avatar_url: string;
 
-  @Prop({ type: String, unique: true, required: true })
-  email: string;
+    @Prop({ type: String })
+    avatar_public_id: string;
+  }
 
-  @Prop({ type: String, required: true })
-  password: string;
+  @Schema({ timestamps: { createdAt: 'createdAt', updatedAt: false } })
+  export class User extends Document {
+    @Prop({ type: String, unique: true, required: true })
+    username: string;
 
-  @Prop({ type: String })
-  fullName: string;
+    @Prop({ type: String, unique: true, required: true })
+    email: string;
 
-  @Prop({ type: String })
-  bio: string;
+    @Prop({ type: String, required: true })
+    password: string;
 
-  @Prop({ type: String })
-  avatar: string;
+    @Prop({ type: String })
+    fullName: string;
 
-  @Prop({ type: Boolean, default: false })
-  isPrivate: boolean;
+    @Prop({ type: String })
+    bio: string;
 
-  @Prop({ type: Boolean, default: false })
-  isVerified: boolean;
+    @Prop({ type: Avatar, default: () => ({}) })
+    avatar: Avatar;
 
-  @Prop({ type: String })
-  phoneNumber: string;
+    @Prop({ type: Boolean, default: false })
+    isPrivate: boolean;
 
-  @Prop({ type: String })
-  gender: string;
+    @Prop({ type: Boolean, default: false })
+    isVerified: boolean;
 
-  @Prop({ type: String })
-  website: string;
+    @Prop({ type: String })
+    phoneNumber: string;
 
-  @Prop({ type: Location, default: () => ({}) })
-  location: Location;
+    @Prop({ type: String })
+    gender: string;
 
-  @Prop({ type: Statistics, default: () => ({}) })
-  statistics: Statistics;
+    @Prop({ type: String })
+    website: string;
 
-  @Prop({ type: Date })
-  lastActive: Date;
+    @Prop({ type: Location, default: () => ({}) })
+    location: Location;
 
-  @Prop({
-    type: String,
-    enum: ['active', 'suspended', 'deactivated'],
-    default: 'active',
-  })
-  accountStatus: string;
-}
+    @Prop({ type: Statistics, default: () => ({}) })
+    statistics: Statistics;
 
-export const UserSchema = SchemaFactory.createForClass(User);
+    @Prop({ type: Date })
+    lastActive: Date;
 
-// Đảm bảo username và email là unique
-UserSchema.index({ username: 1 }, { unique: true });
-UserSchema.index({ email: 1 }, { unique: true });
+    @Prop({
+      type: String,
+      enum: ['active', 'suspended', 'deactivated'],
+      default: 'active',
+    })
+    accountStatus: string;
+
+    @Prop({
+      type: String,
+      enum: ['user', 'admin', 'moderator', 'developer'],
+      default: 'user',
+    })
+    role: string;
+  }
+
+  export const UserSchema = SchemaFactory.createForClass(User);
+
+  UserSchema.index({ username: 1 });
+
+  UserSchema.index({ email: 1 });
+
+  UserSchema.index({ lastActive: -1 });
+
+  UserSchema.index({ accountStatus: 1 });
+
+  UserSchema.index({ role: 1 });
+
+  UserSchema.index({ isVerified: 1 });
